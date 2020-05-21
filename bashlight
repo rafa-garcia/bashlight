@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+#
+# bashlight - adjust backlight brightness in bash.
+
+version=0.1.0
+
+# Disable unicode for speed
+LC_ALL=C
+LANG=C
+
+die() {
+  printf 'error: %s\n' "$1" >&2
+  exit 1
+}
+
+get_brightness() {
+  for device_path in /sys/class/backlight/*; do
+    local max actual actual_percent
+    
+    max=$(<"$device_path/max_brightness")
+    actual=$(<"$device_path/actual_brightness")
+    actual_percent=$((actual * 100 / max))
+
+    printf '%s\n' "device [$device_path]:"
+    printf '%s\n' "  actual brigthness level: $actual ($actual_percent%)"
+    printf '%s\n' "  maximum brigthness level: $max"
+  done
+}
+
+set_brightness() {
+  local delay
+
+  # Hackery to trick a reluctant bash into computing floating point divisions
+  delay=$(printf %.3f "$((10**3 * time / steps / 1000))e-3")
+  
+  for device_path in /sys/class/backlight/*; do
+    local min max actual target increment next_level
+
+    min=$min_brightness
+    max=$(<"$device_path/max_brightness")
+    actual=$(<"$device_path/actual_brightness")
+
+    case $1 in
+      =*) target=$(clamp $((${1#=} * max / 100)) "$min" "$max") ;;
+      +*) target=$(clamp $((actual + ${1#+} * max / 100)) "$min" "$max") ;;
+      -*) target=$(clamp $((actual - ${1#-} * max / 100)) "$min" "$max") ;;
+      *) die "value '$1' not processable" ;;
+    esac
+
+    # Calculate incremental value
+    increment=$(((target - actual) / steps))
+
+    [[ $increment -eq 0 ]] && \
+      die "increment value too low for number of steps ($steps)"
+
+    for ((i=1;i<=steps;i++)); do
+      next_level=$((increment + actual))
+      actual=$((next_level))
+
+      # Write to brightness sys filesystem incrementally
+      [[ -w $device_path/brightness ]] && \
+        printf '%s' "$next_level" > "$device_path/brightness"
+
+      # Sleep
+      read -rt "$delay" <> <(:) || :
+    done
+  done
+}
+
+clamp() {
+  local value min max
+
+  [[ $1 =~ ^[0-9]+$ ]] || die "'$1' is not a number"
+  min=$2; max=$3
+
+  if [[ "$1" -lt $min ]]; then
+    value=$min
+  elif [[ "$1" -gt $max ]]; then
+    value=$max
+  else
+    value=$1
+  fi
+
+  printf '%s\n' "$value"
+}
+
+print_usage() { printf %s "\
+usage: ${0##*/} [options]
+where options are:
+  -help                    Print out a summary of the usage and exit
+  -version                 Print out the program version and exit
+  -get                     Print out the current brightness of each output
+  -set <percentage>        Sets each backlight brightness to the specified level
+  -inc <percentage>        Increases brightness by the specified amount
+  -dec <percentage>        Decreases brightness by the specified amount
+  -time <milliseconds>     Duration of transition to new value. Default is 200
+  -steps <steps>           Number of transition steps. Default is 20
+"
+}
+
+print_version() {
+  printf "%s v%s\n" "${0##*/}" "$version"
+}
+
+main() {
+  min_brightness=1 # safe value to avoid a pitch-black screen
+
+  # Option argument defaults
+  time=200; steps=20
+
+  # Convert to short options and set the transition values early
+  for arg in "$@"; do
+    shift
+    case "$arg" in
+      -time)    time="$1" ;;
+      -steps)   steps="$1" ;;
+      -help)    set -- "$@" "-h" ;;
+      -version) set -- "$@" "-v" ;;
+      -get)     set -- "$@" "-g" ;;
+      -set)     set -- "$@" "-s" "$1" ;;
+      -inc)     set -- "$@" "-i" "$1" ;;
+      -dec)     set -- "$@" "-d" "$1" ;;
+      -*)       set -- "$@" "$arg" ;;
+    esac
+  done
+
+  # Parse short options
+  while getopts ":hvgsid:" opt; do
+    case "$opt" in
+      h) print_usage ;;
+      v) print_version ;;
+      g) get_brightness ;;
+      s) set_brightness "=$2" ;;
+      i) set_brightness "+$2" ;;
+      d) set_brightness "-$2" ;;
+      *) die "$(print_usage)" ;;
+    esac
+  done
+}
+
+main "$@"

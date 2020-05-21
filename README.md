@@ -1,6 +1,6 @@
-# backlight
+# bashlight
 
-<a href="https://travis-ci.org/rafa-garcia/backlight"><img src="https://travis-ci.org/rafa-garcia/backlight.svg?branch=master"></a>
+<a href="https://travis-ci.org/rafa-garcia/bashlight"><img src="https://travis-ci.org/rafa-garcia/bashlight.svg?branch=master"></a>
 
 Brightness control in bash.
 
@@ -16,19 +16,21 @@ This utility handles display brightness when backlight control is exposed to the
 ## Installation
 
 1. Clone the repository.
-    - `git clone https://github.com/rafa-garcia/backlight`
+    - `git clone https://github.com/rafa-garcia/bashlight`
 
-2. Change working directory to `backlight`.
-    - `cd backlight`
+2. Change working directory to `bashlight`.
+    - `cd bashlight`
 
 3. Run `sudo make install` from the root directory to install the script, manpage and udev rule.
+    - The `90-backlight.rules` udev rule will be added to allow the `video` group to control backlight
+    - The `video` group must have the user that runs the application as member
 
-`backlight` can also be uninstalled easily with `sudo make uninstall`.
+`bashlight` can also be uninstalled easily with `sudo make uninstall`.
 
 ## Usage
 
-```sh
-usage: backlight [options]
+```
+usage: bashlight [options]
 Where options are:
   -help                    Print out a summary of the usage and exit
   -version                 Print out the program version and exit
