@@ -1,0 +1,34 @@
+.TH BASHLIGHT 1
+.SH NAME
+bashlight \- adjust backlight brightness using the Linux kernel sysfs interface.
+.SH SYNOPSIS
+.B bashlight
+[\-help]  [\-display \fIdisplay\fP]
+[\-get]
+[\-set percent]
+[\-inc percent]
+[\-dec percent]
+.SH DESCRIPTION
+.I bashlight
+is used to adjust the backlight brightness where supported. It finds all
+outputs on SYSFS supporting backlight brightness control and changes
+them all in the same way.
+.IP \-get
+Print out the current backlight brightness of each output with such a
+control. The brightness is represented as a percentage of the maximum
+brightness supported.
+.IP "\-set \fIpercent\fP"
+Sets each backlight brightness to the specified level.
+.IP "\-inc \fIpercent\fP"
+Increases brightness by the specified amount.
+.IP "\-dec \fIpercent\fP"
+Decreases brightness by the specified amount.
+.IP \-help
+Print out a summary of the usage and exit.
+.IP \-version
+Print out the program version and exit.
+.IP "\-time \fImilliseconds\fP"
+Length of time to spend fading the backlight between old and new value.
+Default is 200.
+.IP "\-steps \fInumber\fP"
+Number of steps to take while transitioning. Default is 20
