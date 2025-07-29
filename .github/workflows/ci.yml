@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install shellcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shellcheck
+    
+    - name: Install shfmt
+      run: |
+        curl -sSL https://github.com/mvdan/sh/releases/download/v3.8.0/shfmt_v3.8.0_linux_amd64 -o shfmt
+        chmod +x shfmt
+        sudo mv shfmt /usr/local/bin/
+    
+    - name: Lint with shellcheck
+      run: shellcheck bashlight
+    
+    - name: Check formatting with shfmt
+      run: shfmt -d bashlight
+    
+    - name: Test script functionality
+      run: |
+        chmod +x bashlight
+        ./bashlight -version
+        ./bashlight -help
+        # Test error handling
+        ! ./bashlight -set abc
+        ! ./bashlight -set 150

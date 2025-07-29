@@ -1,6 +1,6 @@
 # bashlight
 
-<a href="https://travis-ci.org/rafa-garcia/bashlight"><img src="https://travis-ci.org/rafa-garcia/bashlight.svg?branch=master"></a>
+[![CI](https://github.com/rafa-garcia/bashlight/workflows/CI/badge.svg)](https://github.com/rafa-garcia/bashlight/actions)
 
 Brightness control in bash.
 
@@ -10,7 +10,7 @@ This utility handles display brightness when backlight control is exposed to the
 
 - `bash` (pure bash implementation)
 - Linux system with backlight support (check: `ls /sys/class/backlight/`)
-- Root privileges for installation
+- `sudo` privileges for installation
 
 ## Installation
 
