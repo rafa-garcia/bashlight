@@ -8,10 +8,9 @@ This utility handles display brightness when backlight control is exposed to the
 
 ## Dependencies
 
-- `bash`
-- ACPI, graphic or platform driver controlling brightness and exposing a sysfs interface.
-  - `[ "$(ls -A /sys/class/backlight)" ] && echo "Yea" || echo "Nay"`
-- Installed by a sudoer
+- `bash` (pure bash implementation)
+- Linux system with backlight support (check: `ls /sys/class/backlight/`)
+- Root privileges for installation
 
 ## Installation
 
@@ -23,7 +22,7 @@ This utility handles display brightness when backlight control is exposed to the
 
 3. Run `sudo make install` from the root directory to install the script, manpage and udev rule.
     - The `90-backlight.rules` udev rule will be added to allow the `video` group to control backlight
-    - The `video` group must have the user that runs the application as member
+    - Add your user to the `video` group: `sudo usermod -a -G video $USER` (logout/login required)
 
 `bashlight` can also be uninstalled easily with `sudo make uninstall`.
 
@@ -31,15 +30,34 @@ This utility handles display brightness when backlight control is exposed to the
 
 ```
 usage: bashlight [options]
-Where options are:
+where options are:
   -help                    Print out a summary of the usage and exit
   -version                 Print out the program version and exit
-  -get                     Print out the current backlight brightness of each output
+  -get                     Print out the current brightness of each output
   -set <percentage>        Sets each backlight brightness to the specified level
   -inc <percentage>        Increases brightness by the specified amount
   -dec <percentage>        Decreases brightness by the specified amount
-  -time <milliseconds>     Length of time to transition to new value. Default is 200
-  -steps <steps>           Number of steps to take while transitioning. Default is 20
+  -time <milliseconds>     Duration of transition to new value. Default is 200
+  -steps <steps>           Number of transition steps. Default is 20
+```
+
+## Examples
+
+```bash
+# Get current brightness
+bashlight -get
+
+# Set brightness to 50%
+bashlight -set 50
+
+# Increase brightness by 10%
+bashlight -inc 10
+
+# Decrease brightness by 15% with slower transition
+bashlight -dec 15 -time 500
+
+# Set brightness with custom transition steps
+bashlight -set 75 -time 300 -steps 30
 ```
 
 ## Why
