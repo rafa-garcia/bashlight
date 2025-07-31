@@ -107,7 +107,7 @@ set_brightness() {
 clamp() {
 	local value min max
 
-	[[ $1 =~ ^[0-9]+$ ]] || die "'$1' is not a number"
+	[[ $1 =~ ^-?[0-9]+$ ]] || die "'$1' is not a number"
 	min=$2
 	max=$3
 
