@@ -60,7 +60,7 @@ set_brightness() {
 
 	# Pure bash floating-point calculation
 	local delay
-	delay=$(printf %.3f "$((10 ** 3 * time / steps / 1000))e-3")
+	delay=$(printf %.6f "$((10 ** 3 * time / steps))e-6")
 
 	for device_path in /sys/class/backlight/*; do
 		[[ -e "$device_path" ]] || continue
