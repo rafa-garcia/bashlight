@@ -150,7 +150,7 @@ print_version() {
 
 parse_args() {
 	# Default values
-	local time=200 steps=20
+	local action='' value='' time=200 steps=20
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -163,26 +163,17 @@ parse_args() {
 			exit 0
 			;;
 		-get)
-			get_brightness
-			exit 0
+			[[ -z $action ]] || die "cannot combine -get with -$action"
+			action='get'
+			shift
 			;;
-		-set)
-			[[ -n ${2:-} ]] || die "missing percentage for -set"
+		-set | -inc | -dec)
+			[[ -z $action ]] || die "cannot combine $1 with -$action"
+			[[ -n ${2:-} ]] || die "missing percentage for $1"
 			validate_percentage "$2"
-			set_brightness "=$2" "$time" "$steps"
-			exit 0
-			;;
-		-inc)
-			[[ -n ${2:-} ]] || die "missing percentage for -inc"
-			validate_percentage "$2"
-			set_brightness "+$2" "$time" "$steps"
-			exit 0
-			;;
-		-dec)
-			[[ -n ${2:-} ]] || die "missing percentage for -dec"
-			validate_percentage "$2"
-			set_brightness "-$2" "$time" "$steps"
-			exit 0
+			action=${1#-}
+			value=$2
+			shift 2
 			;;
 		-time)
 			[[ -n ${2:-} ]] || die "missing value for -time"
@@ -202,8 +193,13 @@ parse_args() {
 		esac
 	done
 
-	# If we get here, no action was specified
-	print_usage
+	case $action in
+	get) get_brightness ;;
+	set) set_brightness "=$value" "$time" "$steps" ;;
+	inc) set_brightness "+$value" "$time" "$steps" ;;
+	dec) set_brightness "-$value" "$time" "$steps" ;;
+	*) print_usage ;;
+	esac
 }
 
 main() {
