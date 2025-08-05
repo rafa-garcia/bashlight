@@ -26,12 +26,14 @@ validate_environment() {
 validate_percentage() {
 	local value=$1
 	[[ $value =~ ^[0-9]+$ ]] || die "'$value' is not a valid number"
+	value=$((10#$value)) # force decimal, leading zeros would parse as octal
 	[[ $value -ge 0 && $value -le 100 ]] || die "percentage must be between 0-100"
 }
 
 validate_positive_integer() {
 	local value=$1 name=$2
 	[[ $value =~ ^[0-9]+$ ]] || die "'$value' is not a valid number for $name"
+	value=$((10#$value))
 	[[ $value -gt 0 ]] || die "$name must be greater than 0"
 }
 
@@ -45,6 +47,7 @@ get_brightness() {
 
 		local max actual actual_percent
 		max=$(<"$device_path/max_brightness")
+		[[ $max -gt 0 ]] || continue
 		actual=$(<"$device_path/actual_brightness")
 		actual_percent=$((actual * 100 / max))
 
@@ -59,7 +62,7 @@ set_brightness() {
 	validate_environment
 
 	# Pure bash floating-point calculation
-	local delay
+	local delay writable=0
 	delay=$(printf %.6f "$((10 ** 3 * time / steps))e-6")
 
 	for device_path in /sys/class/backlight/*; do
@@ -67,9 +70,11 @@ set_brightness() {
 		[[ -r "$device_path/max_brightness" ]] || continue
 		[[ -r "$device_path/actual_brightness" ]] || continue
 		[[ -w "$device_path/brightness" ]] || continue
+		writable=$((writable + 1))
 
 		local max actual target increment next_level
 		max=$(<"$device_path/max_brightness")
+		[[ $max -gt 0 ]] || continue
 		actual=$(<"$device_path/actual_brightness")
 
 		case $operation in
@@ -109,6 +114,8 @@ set_brightness() {
 			read -rt "$delay" <> <(:) || :
 		done
 	done
+
+	[[ $writable -gt 0 ]] || die "no writable backlight devices (is your user in the video group?)"
 }
 
 clamp() {
@@ -172,19 +179,19 @@ parse_args() {
 			[[ -n ${2:-} ]] || die "missing percentage for $1"
 			validate_percentage "$2"
 			action=${1#-}
-			value=$2
+			value=$((10#$2))
 			shift 2
 			;;
 		-time)
 			[[ -n ${2:-} ]] || die "missing value for -time"
 			validate_positive_integer "$2" "time"
-			time=$2
+			time=$((10#$2))
 			shift 2
 			;;
 		-steps)
 			[[ -n ${2:-} ]] || die "missing value for -steps"
 			validate_positive_integer "$2" "steps"
-			steps=$2
+			steps=$((10#$2))
 			shift 2
 			;;
 		*)
