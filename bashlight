@@ -6,6 +6,7 @@ set -euo pipefail
 
 readonly VERSION=0.2.0
 readonly MIN_BRIGHTNESS=1 # safe value to avoid a pitch-black screen
+readonly BACKLIGHT_DIR=${BACKLIGHT_DIR:-/sys/class/backlight}
 
 # Disable unicode for speed
 LC_ALL=C
@@ -17,9 +18,9 @@ die() {
 }
 
 validate_environment() {
-	[[ -d /sys/class/backlight ]] || die "backlight interface not available"
+	[[ -d $BACKLIGHT_DIR ]] || die "backlight interface not available"
 	local devices
-	devices=(/sys/class/backlight/*)
+	devices=("$BACKLIGHT_DIR"/*)
 	[[ -e "${devices[0]}" ]] || die "no backlight devices found"
 }
 
@@ -40,7 +41,7 @@ validate_positive_integer() {
 get_brightness() {
 	validate_environment
 
-	for device_path in /sys/class/backlight/*; do
+	for device_path in "$BACKLIGHT_DIR"/*; do
 		[[ -e "$device_path" ]] || continue
 		[[ -r "$device_path/max_brightness" ]] || continue
 		[[ -r "$device_path/actual_brightness" ]] || continue
@@ -65,7 +66,7 @@ set_brightness() {
 	local delay writable=0
 	delay=$(printf %.6f "$((10 ** 3 * time / steps))e-6")
 
-	for device_path in /sys/class/backlight/*; do
+	for device_path in "$BACKLIGHT_DIR"/*; do
 		[[ -e "$device_path" ]] || continue
 		[[ -r "$device_path/max_brightness" ]] || continue
 		[[ -r "$device_path/actual_brightness" ]] || continue

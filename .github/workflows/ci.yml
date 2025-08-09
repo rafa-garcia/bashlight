@@ -13,10 +13,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install shellcheck
+    - name: Install shellcheck and bats
       run: |
         sudo apt-get update
-        sudo apt-get install -y shellcheck
+        sudo apt-get install -y shellcheck bats
     
     - name: Install shfmt
       run: |
@@ -30,11 +30,5 @@ jobs:
     - name: Check formatting with shfmt
       run: shfmt -d bashlight
     
-    - name: Test script functionality
-      run: |
-        chmod +x bashlight
-        ./bashlight -version
-        ./bashlight -help
-        # Test error handling
-        ! ./bashlight -set abc
-        ! ./bashlight -set 150
+    - name: Run tests
+      run: bats tests

@@ -60,6 +60,14 @@ bashlight -dec 15 -time 500
 bashlight -set 75 -time 300 -steps 30
 ```
 
+## Tests
+
+```bash
+bats tests
+```
+
+The suite points `BACKLIGHT_DIR` at a throwaway directory, so it runs anywhere [bats](https://github.com/bats-core/bats-core) does.
+
 ## Why
 
 After moving to [Wayland](https://wayland.freedesktop.org/), I struggled to find a portable (as in pure bash) [X.Org](https://www.x.org/)'s `xbacklight`-like utility that does not require X and handles similar CLI options.
