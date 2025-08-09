@@ -108,6 +108,28 @@ level() {
 	[ "$(level acpi_video0)" -eq 6 ]
 }
 
+@test "lists device names" {
+	add_device acpi_video0 15 3
+	run "$bashlight" -list
+	[ "$status" -eq 0 ]
+	[[ $output == *"acpi_video0"* ]]
+	[[ $output == *"test_backlight"* ]]
+}
+
+@test "device restricts the operation to one device" {
+	add_device acpi_video0 15 3
+	run "$bashlight" -device test_backlight -set 40 -time 1 -steps 1
+	[ "$status" -eq 0 ]
+	[ "$(level test_backlight)" -eq 40 ]
+	[ "$(level acpi_video0)" -eq 3 ]
+}
+
+@test "rejects an unknown device" {
+	run "$bashlight" -device nope -get
+	[ "$status" -eq 1 ]
+	[[ $output == *"no such device"* ]]
+}
+
 @test "skips devices reporting no maximum" {
 	add_device broken 0 0
 	run "$bashlight" -set 40 -time 1 -steps 1

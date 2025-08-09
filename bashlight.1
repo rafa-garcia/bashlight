@@ -3,11 +3,16 @@
 bashlight \- adjust backlight brightness using the Linux kernel sysfs interface.
 .SH SYNOPSIS
 .B bashlight
-[\-help]  [\-display \fIdisplay\fP]
+[\-help]
+[\-version]
 [\-get]
+[\-list]
 [\-set percent]
 [\-inc percent]
 [\-dec percent]
+[\-device name]
+[\-time milliseconds]
+[\-steps number]
 .SH DESCRIPTION
 .I bashlight
 is used to adjust the backlight brightness where supported. It finds all
@@ -23,6 +28,10 @@ Sets each backlight brightness to the specified level.
 Increases brightness by the specified amount.
 .IP "\-dec \fIpercent\fP"
 Decreases brightness by the specified amount.
+.IP \-list
+Print out the names of the backlight devices found.
+.IP "\-device \fIname\fP"
+Apply the operation to the named device only instead of every output.
 .IP \-help
 Print out a summary of the usage and exit.
 .IP \-version

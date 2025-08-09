@@ -38,10 +38,26 @@ validate_positive_integer() {
 	[[ $value -gt 0 ]] || die "$name must be greater than 0"
 }
 
-get_brightness() {
+validate_device() {
+	local device=$1
+	[[ -z $device ]] || [[ -d $BACKLIGHT_DIR/$device ]] || die "no such device: $device"
+}
+
+list_devices() {
 	validate_environment
 
 	for device_path in "$BACKLIGHT_DIR"/*; do
+		printf '%s\n' "${device_path##*/}"
+	done
+}
+
+get_brightness() {
+	local device=${1:-}
+	validate_environment
+	validate_device "$device"
+
+	for device_path in "$BACKLIGHT_DIR"/*; do
+		[[ -z $device || ${device_path##*/} == "$device" ]] || continue
 		[[ -e "$device_path" ]] || continue
 		[[ -r "$device_path/max_brightness" ]] || continue
 		[[ -r "$device_path/actual_brightness" ]] || continue
@@ -59,14 +75,16 @@ get_brightness() {
 }
 
 set_brightness() {
-	local operation=$1 time=${2:-200} steps=${3:-20}
+	local operation=$1 time=${2:-200} steps=${3:-20} device=${4:-}
 	validate_environment
+	validate_device "$device"
 
 	# Pure bash floating-point calculation
 	local delay writable=0
 	delay=$(printf %.6f "$((10 ** 3 * time / steps))e-6")
 
 	for device_path in "$BACKLIGHT_DIR"/*; do
+		[[ -z $device || ${device_path##*/} == "$device" ]] || continue
 		[[ -e "$device_path" ]] || continue
 		[[ -r "$device_path/max_brightness" ]] || continue
 		[[ -r "$device_path/actual_brightness" ]] || continue
@@ -144,9 +162,11 @@ where options are:
   -help                    Print out a summary of the usage and exit
   -version                 Print out the program version and exit
   -get                     Print out the current brightness of each output
+  -list                    Print out the backlight device names
   -set <percentage>        Sets each backlight brightness to the specified level
   -inc <percentage>        Increases brightness by the specified amount
   -dec <percentage>        Decreases brightness by the specified amount
+  -device <name>           Apply the operation to the given device only
   -time <milliseconds>     Duration of transition to new value. Default is 200
   -steps <steps>           Number of transition steps. Default is 20
 "
@@ -158,7 +178,7 @@ print_version() {
 
 parse_args() {
 	# Default values
-	local action='' value='' time=200 steps=20
+	local action='' value='' device='' time=200 steps=20
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -175,12 +195,22 @@ parse_args() {
 			action='get'
 			shift
 			;;
+		-list)
+			[[ -z $action ]] || die "cannot combine -list with -$action"
+			action='list'
+			shift
+			;;
 		-set | -inc | -dec)
 			[[ -z $action ]] || die "cannot combine $1 with -$action"
 			[[ -n ${2:-} ]] || die "missing percentage for $1"
 			validate_percentage "$2"
 			action=${1#-}
 			value=$((10#$2))
+			shift 2
+			;;
+		-device)
+			[[ -n ${2:-} ]] || die "missing name for -device"
+			device=$2
 			shift 2
 			;;
 		-time)
@@ -202,10 +232,11 @@ parse_args() {
 	done
 
 	case $action in
-	get) get_brightness ;;
-	set) set_brightness "=$value" "$time" "$steps" ;;
-	inc) set_brightness "+$value" "$time" "$steps" ;;
-	dec) set_brightness "-$value" "$time" "$steps" ;;
+	get) get_brightness "$device" ;;
+	list) list_devices ;;
+	set) set_brightness "=$value" "$time" "$steps" "$device" ;;
+	inc) set_brightness "+$value" "$time" "$steps" "$device" ;;
+	dec) set_brightness "-$value" "$time" "$steps" "$device" ;;
 	*) print_usage ;;
 	esac
 }

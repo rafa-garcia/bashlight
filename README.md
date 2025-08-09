@@ -34,9 +34,11 @@ where options are:
   -help                    Print out a summary of the usage and exit
   -version                 Print out the program version and exit
   -get                     Print out the current brightness of each output
+  -list                    Print out the backlight device names
   -set <percentage>        Sets each backlight brightness to the specified level
   -inc <percentage>        Increases brightness by the specified amount
   -dec <percentage>        Decreases brightness by the specified amount
+  -device <name>           Apply the operation to the given device only
   -time <milliseconds>     Duration of transition to new value. Default is 200
   -steps <steps>           Number of transition steps. Default is 20
 ```
@@ -58,6 +60,10 @@ bashlight -dec 15 -time 500
 
 # Set brightness with custom transition steps
 bashlight -set 75 -time 300 -steps 30
+
+# Only touch one device on machines with several
+bashlight -list
+bashlight -device intel_backlight -set 50
 ```
 
 ## Tests
