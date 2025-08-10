@@ -46,10 +46,10 @@ level() {
 	[ "$status" -eq 1 ]
 }
 
-@test "get reports the current level" {
+@test "get reports one line per device" {
 	run "$bashlight" -get
 	[ "$status" -eq 0 ]
-	[[ $output == *"50 (50%)"* ]]
+	[ "$output" = "test_backlight: 50% (50/100)" ]
 }
 
 @test "set writes the scaled level" {

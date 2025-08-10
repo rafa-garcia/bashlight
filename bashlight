@@ -68,9 +68,7 @@ get_brightness() {
 		actual=$(<"$device_path/actual_brightness")
 		actual_percent=$((actual * 100 / max))
 
-		printf '%s\n' "device [$device_path]:"
-		printf '%s\n' "  actual brightness level: $actual ($actual_percent%)"
-		printf '%s\n' "  maximum brightness level: $max"
+		printf '%s: %d%% (%d/%d)\n' "${device_path##*/}" "$actual_percent" "$actual" "$max"
 	done
 }
 
