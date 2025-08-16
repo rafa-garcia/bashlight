@@ -108,6 +108,16 @@ level() {
 	[ "$(level acpi_video0)" -eq 6 ]
 }
 
+@test "falls back to brightness when actual_brightness is missing" {
+	rm "$BACKLIGHT_DIR/test_backlight/actual_brightness"
+	run "$bashlight" -get
+	[ "$status" -eq 0 ]
+	[ "$output" = "test_backlight: 50% (50/100)" ]
+	run "$bashlight" -set 30 -time 1 -steps 1
+	[ "$status" -eq 0 ]
+	[ "$(level test_backlight)" -eq 30 ]
+}
+
 @test "lists device names" {
 	add_device acpi_video0 15 3
 	run "$bashlight" -list

@@ -60,12 +60,16 @@ get_brightness() {
 		[[ -z $device || ${device_path##*/} == "$device" ]] || continue
 		[[ -e "$device_path" ]] || continue
 		[[ -r "$device_path/max_brightness" ]] || continue
-		[[ -r "$device_path/actual_brightness" ]] || continue
+
+		# Not every driver exposes actual_brightness
+		local actual_file="$device_path/actual_brightness"
+		[[ -r $actual_file ]] || actual_file="$device_path/brightness"
+		[[ -r $actual_file ]] || continue
 
 		local max actual actual_percent
 		max=$(<"$device_path/max_brightness")
 		[[ $max -gt 0 ]] || continue
-		actual=$(<"$device_path/actual_brightness")
+		actual=$(<"$actual_file")
 		actual_percent=$((actual * 100 / max))
 
 		printf '%s: %d%% (%d/%d)\n' "${device_path##*/}" "$actual_percent" "$actual" "$max"
@@ -85,14 +89,18 @@ set_brightness() {
 		[[ -z $device || ${device_path##*/} == "$device" ]] || continue
 		[[ -e "$device_path" ]] || continue
 		[[ -r "$device_path/max_brightness" ]] || continue
-		[[ -r "$device_path/actual_brightness" ]] || continue
 		[[ -w "$device_path/brightness" ]] || continue
+
+		# Not every driver exposes actual_brightness
+		local actual_file="$device_path/actual_brightness"
+		[[ -r $actual_file ]] || actual_file="$device_path/brightness"
+		[[ -r $actual_file ]] || continue
 		writable=$((writable + 1))
 
 		local max actual target increment next_level
 		max=$(<"$device_path/max_brightness")
 		[[ $max -gt 0 ]] || continue
-		actual=$(<"$device_path/actual_brightness")
+		actual=$(<"$actual_file")
 
 		case $operation in
 		=*) target=$(clamp $((${operation#=} * max / 100)) "$MIN_BRIGHTNESS" "$max") ;;
