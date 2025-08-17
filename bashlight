@@ -17,9 +17,8 @@ die() {
 	exit 1
 }
 
-validate_environment() {
+find_devices() {
 	[[ -d $BACKLIGHT_DIR ]] || die "backlight interface not available"
-	local devices
 	devices=("$BACKLIGHT_DIR"/*)
 	[[ -e "${devices[0]}" ]] || die "no backlight devices found"
 }
@@ -44,21 +43,20 @@ validate_device() {
 }
 
 list_devices() {
-	validate_environment
+	find_devices
 
-	for device_path in "$BACKLIGHT_DIR"/*; do
+	for device_path in "${devices[@]}"; do
 		printf '%s\n' "${device_path##*/}"
 	done
 }
 
 get_brightness() {
 	local device=${1:-}
-	validate_environment
+	find_devices
 	validate_device "$device"
 
-	for device_path in "$BACKLIGHT_DIR"/*; do
+	for device_path in "${devices[@]}"; do
 		[[ -z $device || ${device_path##*/} == "$device" ]] || continue
-		[[ -e "$device_path" ]] || continue
 		[[ -r "$device_path/max_brightness" ]] || continue
 
 		# Not every driver exposes actual_brightness
@@ -78,16 +76,15 @@ get_brightness() {
 
 set_brightness() {
 	local operation=$1 time=${2:-200} steps=${3:-20} device=${4:-}
-	validate_environment
+	find_devices
 	validate_device "$device"
 
 	# Pure bash floating-point calculation
 	local delay writable=0
 	delay=$(printf %.6f "$((10 ** 3 * time / steps))e-6")
 
-	for device_path in "$BACKLIGHT_DIR"/*; do
+	for device_path in "${devices[@]}"; do
 		[[ -z $device || ${device_path##*/} == "$device" ]] || continue
-		[[ -e "$device_path" ]] || continue
 		[[ -r "$device_path/max_brightness" ]] || continue
 		[[ -w "$device_path/brightness" ]] || continue
 
