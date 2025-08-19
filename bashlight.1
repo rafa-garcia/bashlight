@@ -11,6 +11,7 @@ bashlight \- adjust backlight brightness using the Linux kernel sysfs interface.
 [\-inc percent]
 [\-dec percent]
 [\-device name]
+[\-kbd]
 [\-time milliseconds]
 [\-steps number]
 .SH DESCRIPTION
@@ -32,6 +33,9 @@ Decreases brightness by the specified amount.
 Print out the names of the backlight devices found.
 .IP "\-device \fIname\fP"
 Apply the operation to the named device only instead of every output.
+.IP \-kbd
+Control keyboard backlights found under /sys/class/leds instead of
+displays. Setting 0 is allowed and switches the light off.
 .IP \-help
 Print out a summary of the usage and exit.
 .IP \-version

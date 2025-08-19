@@ -21,7 +21,7 @@ This utility handles display brightness when backlight control is exposed to the
     - `cd bashlight`
 
 3. Run `sudo make install` from the root directory to install the script, manpage and udev rule.
-    - The `90-backlight.rules` udev rule will be added to allow the `video` group to control backlight
+    - The `90-backlight.rules` udev rule will be added to allow the `video` group to control backlight and keyboard backlight
     - Add your user to the `video` group: `sudo usermod -a -G video $USER` (logout/login required)
 
 `bashlight` can also be uninstalled easily with `sudo make uninstall`.
@@ -39,6 +39,7 @@ where options are:
   -inc <percentage>        Increases brightness by the specified amount
   -dec <percentage>        Decreases brightness by the specified amount
   -device <name>           Apply the operation to the given device only
+  -kbd                     Control keyboard backlights instead of displays
   -time <milliseconds>     Duration of transition to new value. Default is 200
   -steps <steps>           Number of transition steps. Default is 20
 ```
@@ -64,6 +65,9 @@ bashlight -set 75 -time 300 -steps 30
 # Only touch one device on machines with several
 bashlight -list
 bashlight -device intel_backlight -set 50
+
+# Turn the keyboard backlight off
+bashlight -kbd -set 0
 ```
 
 ## Tests

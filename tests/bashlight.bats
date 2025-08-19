@@ -2,7 +2,10 @@
 
 setup() {
 	export BACKLIGHT_DIR="$BATS_TEST_TMPDIR/backlight"
+	export LEDS_DIR="$BATS_TEST_TMPDIR/leds"
 	add_device test_backlight 100 50
+	add_led 'tpacpi::kbd_backlight' 2 1
+	add_led 'input3::capslock' 1 0
 	bashlight="$BATS_TEST_DIRNAME/../bashlight"
 }
 
@@ -14,8 +17,19 @@ add_device() {
 	echo "$3" >"$dir/brightness"
 }
 
+add_led() {
+	local dir="$LEDS_DIR/$1"
+	mkdir -p "$dir"
+	echo "$2" >"$dir/max_brightness"
+	echo "$3" >"$dir/brightness"
+}
+
 level() {
 	cat "$BACKLIGHT_DIR/$1/brightness"
+}
+
+led_level() {
+	cat "$LEDS_DIR/$1/brightness"
 }
 
 @test "prints the version" {
@@ -138,6 +152,48 @@ level() {
 	run "$bashlight" -device nope -get
 	[ "$status" -eq 1 ]
 	[[ $output == *"no such device"* ]]
+}
+
+@test "kbd lists only keyboard backlights" {
+	run "$bashlight" -kbd -list
+	[ "$status" -eq 0 ]
+	[ "$output" = "tpacpi::kbd_backlight" ]
+}
+
+@test "kbd reports the current level" {
+	run "$bashlight" -kbd -get
+	[ "$status" -eq 0 ]
+	[ "$output" = "tpacpi::kbd_backlight: 50% (1/2)" ]
+}
+
+@test "kbd set allows zero" {
+	run "$bashlight" -kbd -set 0 -time 1 -steps 1
+	[ "$status" -eq 0 ]
+	[ "$(led_level 'tpacpi::kbd_backlight')" -eq 0 ]
+}
+
+@test "kbd scales against the device maximum" {
+	run "$bashlight" -kbd -set 100 -time 1 -steps 1
+	[ "$(led_level 'tpacpi::kbd_backlight')" -eq 2 ]
+}
+
+@test "kbd leaves other leds alone" {
+	run "$bashlight" -kbd -set 100 -time 1 -steps 1
+	[ "$(led_level 'input3::capslock')" -eq 0 ]
+}
+
+@test "kbd rejects a led that is not a keyboard backlight" {
+	run "$bashlight" -kbd -device 'input3::capslock' -get
+	[ "$status" -eq 1 ]
+	[[ $output == *"no such keyboard backlight"* ]]
+}
+
+@test "kbd fails when no keyboard backlight exists" {
+	export LEDS_DIR="$BATS_TEST_TMPDIR/empty"
+	mkdir -p "$LEDS_DIR"
+	run "$bashlight" -kbd -get
+	[ "$status" -eq 1 ]
+	[[ $output == *"no keyboard backlight"* ]]
 }
 
 @test "skips devices reporting no maximum" {

@@ -7,6 +7,7 @@ set -euo pipefail
 readonly VERSION=0.3.0
 readonly MIN_BRIGHTNESS=1 # safe value to avoid a pitch-black screen
 readonly BACKLIGHT_DIR=${BACKLIGHT_DIR:-/sys/class/backlight}
+readonly LEDS_DIR=${LEDS_DIR:-/sys/class/leds}
 
 # Disable unicode for speed
 LC_ALL=C
@@ -18,9 +19,17 @@ die() {
 }
 
 find_devices() {
-	[[ -d $BACKLIGHT_DIR ]] || die "backlight interface not available"
-	devices=("$BACKLIGHT_DIR"/*)
-	[[ -e "${devices[0]}" ]] || die "no backlight devices found"
+	local kbd=${1:-0}
+
+	if [[ $kbd -eq 1 ]]; then
+		[[ -d $LEDS_DIR ]] || die "led interface not available"
+		devices=("$LEDS_DIR"/*kbd_backlight)
+		[[ -e "${devices[0]}" ]] || die "no keyboard backlight devices found"
+	else
+		[[ -d $BACKLIGHT_DIR ]] || die "backlight interface not available"
+		devices=("$BACKLIGHT_DIR"/*)
+		[[ -e "${devices[0]}" ]] || die "no backlight devices found"
+	fi
 }
 
 validate_percentage() {
@@ -38,12 +47,19 @@ validate_positive_integer() {
 }
 
 validate_device() {
-	local device=$1
-	[[ -z $device ]] || [[ -d $BACKLIGHT_DIR/$device ]] || die "no such device: $device"
+	local device=$1 kbd=${2:-0}
+	[[ -n $device ]] || return 0
+
+	if [[ $kbd -eq 1 ]]; then
+		[[ $device == *kbd_backlight && -d $LEDS_DIR/$device ]] || die "no such keyboard backlight: $device"
+	else
+		[[ -d $BACKLIGHT_DIR/$device ]] || die "no such device: $device"
+	fi
 }
 
 list_devices() {
-	find_devices
+	local kbd=${1:-0}
+	find_devices "$kbd"
 
 	for device_path in "${devices[@]}"; do
 		printf '%s\n' "${device_path##*/}"
@@ -51,9 +67,9 @@ list_devices() {
 }
 
 get_brightness() {
-	local device=${1:-}
-	find_devices
-	validate_device "$device"
+	local device=${1:-} kbd=${2:-0}
+	find_devices "$kbd"
+	validate_device "$device" "$kbd"
 
 	for device_path in "${devices[@]}"; do
 		[[ -z $device || ${device_path##*/} == "$device" ]] || continue
@@ -75,9 +91,13 @@ get_brightness() {
 }
 
 set_brightness() {
-	local operation=$1 time=${2:-200} steps=${3:-20} device=${4:-}
-	find_devices
-	validate_device "$device"
+	local operation=$1 time=${2:-200} steps=${3:-20} device=${4:-} kbd=${5:-0}
+	find_devices "$kbd"
+	validate_device "$device" "$kbd"
+
+	# Keyboard backlights may switch off entirely
+	local floor=$MIN_BRIGHTNESS
+	[[ $kbd -eq 1 ]] && floor=0
 
 	# Pure bash floating-point calculation
 	local delay writable=0
@@ -100,9 +120,9 @@ set_brightness() {
 		actual=$(<"$actual_file")
 
 		case $operation in
-		=*) target=$(clamp $((${operation#=} * max / 100)) "$MIN_BRIGHTNESS" "$max") ;;
-		+*) target=$(clamp $((actual + ${operation#+} * max / 100)) "$MIN_BRIGHTNESS" "$max") ;;
-		-*) target=$(clamp $((actual - ${operation#-} * max / 100)) "$MIN_BRIGHTNESS" "$max") ;;
+		=*) target=$(clamp $((${operation#=} * max / 100)) "$floor" "$max") ;;
+		+*) target=$(clamp $((actual + ${operation#+} * max / 100)) "$floor" "$max") ;;
+		-*) target=$(clamp $((actual - ${operation#-} * max / 100)) "$floor" "$max") ;;
 		*) die "value '$operation' not processable" ;;
 		esac
 
@@ -170,6 +190,7 @@ where options are:
   -inc <percentage>        Increases brightness by the specified amount
   -dec <percentage>        Decreases brightness by the specified amount
   -device <name>           Apply the operation to the given device only
+  -kbd                     Control keyboard backlights instead of displays
   -time <milliseconds>     Duration of transition to new value. Default is 200
   -steps <steps>           Number of transition steps. Default is 20
 "
@@ -181,7 +202,7 @@ print_version() {
 
 parse_args() {
 	# Default values
-	local action='' value='' device='' time=200 steps=20
+	local action='' value='' device='' kbd=0 time=200 steps=20
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -216,6 +237,10 @@ parse_args() {
 			device=$2
 			shift 2
 			;;
+		-kbd)
+			kbd=1
+			shift
+			;;
 		-time)
 			[[ -n ${2:-} ]] || die "missing value for -time"
 			validate_positive_integer "$2" "time"
@@ -235,11 +260,11 @@ parse_args() {
 	done
 
 	case $action in
-	get) get_brightness "$device" ;;
-	list) list_devices ;;
-	set) set_brightness "=$value" "$time" "$steps" "$device" ;;
-	inc) set_brightness "+$value" "$time" "$steps" "$device" ;;
-	dec) set_brightness "-$value" "$time" "$steps" "$device" ;;
+	get) get_brightness "$device" "$kbd" ;;
+	list) list_devices "$kbd" ;;
+	set) set_brightness "=$value" "$time" "$steps" "$device" "$kbd" ;;
+	inc) set_brightness "+$value" "$time" "$steps" "$device" "$kbd" ;;
+	dec) set_brightness "-$value" "$time" "$steps" "$device" "$kbd" ;;
 	*) print_usage ;;
 	esac
 }
