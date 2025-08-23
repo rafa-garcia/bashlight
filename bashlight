@@ -90,6 +90,38 @@ get_brightness() {
 	done
 }
 
+fade_to() {
+	local device_path=$1 actual=$2 target=$3 steps=$4 delay=$5
+	local increment next_level
+
+	# Calculate incremental value - ensure it's not zero
+	increment=$(((target - actual) / steps))
+	[[ $increment -eq 0 ]] && increment=$([[ $target -gt $actual ]] && echo 1 || echo -1)
+
+	# Transition smoothly to target
+	for ((i = 1; i <= steps; i++)); do
+		if [[ $i -eq $steps ]]; then
+			# Ensure we hit the exact target on the final step
+			next_level=$target
+		else
+			next_level=$((actual + increment))
+			# Never step past the target
+			if [[ $increment -gt 0 && $next_level -gt $target ]] ||
+				[[ $increment -lt 0 && $next_level -lt $target ]]; then
+				next_level=$target
+			fi
+		fi
+
+		printf '%s' "$next_level" >"$device_path/brightness"
+		actual=$next_level
+
+		[[ $actual -eq $target ]] && break
+
+		# Sleep between steps
+		read -rt "$delay" <> <(:) || :
+	done
+}
+
 set_brightness() {
 	local operation=$1 time=${2:-200} steps=${3:-20} device=${4:-} kbd=${5:-0}
 	find_devices "$kbd"
@@ -114,7 +146,7 @@ set_brightness() {
 		[[ -r $actual_file ]] || continue
 		writable=$((writable + 1))
 
-		local max actual target increment next_level
+		local max actual target
 		max=$(<"$device_path/max_brightness")
 		[[ $max -gt 0 ]] || continue
 		actual=$(<"$actual_file")
@@ -129,32 +161,7 @@ set_brightness() {
 		# Skip if no change needed
 		[[ $target -eq $actual ]] && continue
 
-		# Calculate incremental value - ensure it's not zero
-		increment=$(((target - actual) / steps))
-		[[ $increment -eq 0 ]] && increment=$([[ $target -gt $actual ]] && echo 1 || echo -1)
-
-		# Transition smoothly to target
-		for ((i = 1; i <= steps; i++)); do
-			if [[ $i -eq $steps ]]; then
-				# Ensure we hit the exact target on the final step
-				next_level=$target
-			else
-				next_level=$((actual + increment))
-				# Never step past the target
-				if [[ $increment -gt 0 && $next_level -gt $target ]] ||
-					[[ $increment -lt 0 && $next_level -lt $target ]]; then
-					next_level=$target
-				fi
-			fi
-
-			printf '%s' "$next_level" >"$device_path/brightness"
-			actual=$next_level
-
-			[[ $actual -eq $target ]] && break
-
-			# Sleep between steps
-			read -rt "$delay" <> <(:) || :
-		done
+		fade_to "$device_path" "$actual" "$target" "$steps" "$delay"
 	done
 
 	[[ $writable -gt 0 ]] || die "no writable backlight devices (is your user in the video group?)"
