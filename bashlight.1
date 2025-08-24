@@ -10,6 +10,8 @@ bashlight \- adjust backlight brightness using the Linux kernel sysfs interface.
 [\-set percent]
 [\-inc percent]
 [\-dec percent]
+[\-save]
+[\-restore]
 [\-device name]
 [\-kbd]
 [\-time milliseconds]
@@ -31,6 +33,11 @@ Increases brightness by the specified amount.
 Decreases brightness by the specified amount.
 .IP \-list
 Print out the names of the backlight devices found.
+.IP \-save
+Save the current brightness of each output. The state is kept under
+$XDG_RUNTIME_DIR and does not survive a reboot.
+.IP \-restore
+Restore the brightness saved by \-save.
 .IP "\-device \fIname\fP"
 Apply the operation to the named device only instead of every output.
 .IP \-kbd

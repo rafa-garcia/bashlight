@@ -38,6 +38,8 @@ where options are:
   -set <percentage>        Sets each backlight brightness to the specified level
   -inc <percentage>        Increases brightness by the specified amount
   -dec <percentage>        Decreases brightness by the specified amount
+  -save                    Save the current brightness of each output
+  -restore                 Restore the last saved brightness
   -device <name>           Apply the operation to the given device only
   -kbd                     Control keyboard backlights instead of displays
   -time <milliseconds>     Duration of transition to new value. Default is 200
@@ -68,6 +70,10 @@ bashlight -device intel_backlight -set 50
 
 # Turn the keyboard backlight off
 bashlight -kbd -set 0
+
+# Dim for the lock screen, put it back on unlock
+bashlight -save && bashlight -set 5
+bashlight -restore
 ```
 
 ## Tests

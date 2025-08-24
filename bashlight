@@ -8,6 +8,7 @@ readonly VERSION=0.4.0
 readonly MIN_BRIGHTNESS=1 # safe value to avoid a pitch-black screen
 readonly BACKLIGHT_DIR=${BACKLIGHT_DIR:-/sys/class/backlight}
 readonly LEDS_DIR=${LEDS_DIR:-/sys/class/leds}
+readonly STATE_DIR=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/bashlight-$UID
 
 # Disable unicode for speed
 LC_ALL=C
@@ -88,6 +89,74 @@ get_brightness() {
 
 		printf '%s: %d%% (%d/%d)\n' "${device_path##*/}" "$actual_percent" "$actual" "$max"
 	done
+}
+
+save_brightness() {
+	local device=${1:-} kbd=${2:-0}
+	find_devices "$kbd"
+	validate_device "$device" "$kbd"
+
+	local class=backlight
+	[[ $kbd -eq 1 ]] && class=leds
+	mkdir -p "$STATE_DIR/$class"
+
+	local saved=0
+	for device_path in "${devices[@]}"; do
+		[[ -z $device || ${device_path##*/} == "$device" ]] || continue
+
+		# Not every driver exposes actual_brightness
+		local actual_file="$device_path/actual_brightness"
+		[[ -r $actual_file ]] || actual_file="$device_path/brightness"
+		[[ -r $actual_file ]] || continue
+
+		printf '%s\n' "$(<"$actual_file")" >"$STATE_DIR/$class/${device_path##*/}"
+		saved=$((saved + 1))
+	done
+
+	[[ $saved -gt 0 ]] || die "no readable backlight devices to save"
+}
+
+restore_brightness() {
+	local time=${1:-200} steps=${2:-20} device=${3:-} kbd=${4:-0}
+	find_devices "$kbd"
+	validate_device "$device" "$kbd"
+
+	local class=backlight floor=$MIN_BRIGHTNESS
+	if [[ $kbd -eq 1 ]]; then
+		class=leds
+		floor=0
+	fi
+
+	# Pure bash floating-point calculation
+	local delay restored=0
+	delay=$(printf %.6f "$((10 ** 3 * time / steps))e-6")
+
+	for device_path in "${devices[@]}"; do
+		[[ -z $device || ${device_path##*/} == "$device" ]] || continue
+		local state_file="$STATE_DIR/$class/${device_path##*/}"
+		[[ -r $state_file ]] || continue
+		[[ -r "$device_path/max_brightness" ]] || continue
+		[[ -w "$device_path/brightness" ]] || continue
+
+		# Not every driver exposes actual_brightness
+		local actual_file="$device_path/actual_brightness"
+		[[ -r $actual_file ]] || actual_file="$device_path/brightness"
+		[[ -r $actual_file ]] || continue
+
+		local max actual target
+		max=$(<"$device_path/max_brightness")
+		[[ $max -gt 0 ]] || continue
+		actual=$(<"$actual_file")
+		target=$(clamp "$(<"$state_file")" "$floor" "$max")
+		restored=$((restored + 1))
+
+		# Skip if no change needed
+		[[ $target -eq $actual ]] && continue
+
+		fade_to "$device_path" "$actual" "$target" "$steps" "$delay"
+	done
+
+	[[ $restored -gt 0 ]] || die "nothing saved to restore"
 }
 
 fade_to() {
@@ -196,6 +265,8 @@ where options are:
   -set <percentage>        Sets each backlight brightness to the specified level
   -inc <percentage>        Increases brightness by the specified amount
   -dec <percentage>        Decreases brightness by the specified amount
+  -save                    Save the current brightness of each output
+  -restore                 Restore the last saved brightness
   -device <name>           Apply the operation to the given device only
   -kbd                     Control keyboard backlights instead of displays
   -time <milliseconds>     Duration of transition to new value. Default is 200
@@ -229,6 +300,16 @@ parse_args() {
 		-list)
 			[[ -z $action ]] || die "cannot combine -list with -$action"
 			action='list'
+			shift
+			;;
+		-save)
+			[[ -z $action ]] || die "cannot combine -save with -$action"
+			action='save'
+			shift
+			;;
+		-restore)
+			[[ -z $action ]] || die "cannot combine -restore with -$action"
+			action='restore'
 			shift
 			;;
 		-set | -inc | -dec)
@@ -269,6 +350,8 @@ parse_args() {
 	case $action in
 	get) get_brightness "$device" "$kbd" ;;
 	list) list_devices "$kbd" ;;
+	save) save_brightness "$device" "$kbd" ;;
+	restore) restore_brightness "$time" "$steps" "$device" "$kbd" ;;
 	set) set_brightness "=$value" "$time" "$steps" "$device" "$kbd" ;;
 	inc) set_brightness "+$value" "$time" "$steps" "$device" "$kbd" ;;
 	dec) set_brightness "-$value" "$time" "$steps" "$device" "$kbd" ;;

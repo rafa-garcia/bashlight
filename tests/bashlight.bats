@@ -3,6 +3,7 @@
 setup() {
 	export BACKLIGHT_DIR="$BATS_TEST_TMPDIR/backlight"
 	export LEDS_DIR="$BATS_TEST_TMPDIR/leds"
+	export XDG_RUNTIME_DIR="$BATS_TEST_TMPDIR/run"
 	add_device test_backlight 100 50
 	add_led 'tpacpi::kbd_backlight' 2 1
 	add_led 'input3::capslock' 1 0
@@ -152,6 +153,52 @@ led_level() {
 	run "$bashlight" -device nope -get
 	[ "$status" -eq 1 ]
 	[[ $output == *"no such device"* ]]
+}
+
+@test "save and restore round-trip" {
+	run "$bashlight" -save
+	[ "$status" -eq 0 ]
+	run "$bashlight" -set 90 -time 1 -steps 1
+	[ "$(level test_backlight)" -eq 90 ]
+	echo 90 >"$BACKLIGHT_DIR/test_backlight/actual_brightness"
+	run "$bashlight" -restore -time 1 -steps 1
+	[ "$status" -eq 0 ]
+	[ "$(level test_backlight)" -eq 50 ]
+}
+
+@test "restore without a save fails" {
+	run "$bashlight" -restore
+	[ "$status" -eq 1 ]
+	[[ $output == *"nothing saved"* ]]
+}
+
+@test "save and restore are per class" {
+	run "$bashlight" -save
+	run "$bashlight" -kbd -restore
+	[ "$status" -eq 1 ]
+	[[ $output == *"nothing saved"* ]]
+}
+
+@test "save with device only records that device" {
+	add_device acpi_video0 15 3
+	run "$bashlight" -device acpi_video0 -save
+	run "$bashlight" -set 90 -time 1 -steps 1
+	echo 90 >"$BACKLIGHT_DIR/test_backlight/actual_brightness"
+	echo 13 >"$BACKLIGHT_DIR/acpi_video0/actual_brightness"
+	run "$bashlight" -restore -time 1 -steps 1
+	[ "$status" -eq 0 ]
+	[ "$(level acpi_video0)" -eq 3 ]
+	[ "$(level test_backlight)" -eq 90 ]
+}
+
+@test "kbd restore brings the light back to zero" {
+	run "$bashlight" -kbd -set 0 -time 1 -steps 1
+	run "$bashlight" -kbd -save
+	run "$bashlight" -kbd -set 100 -time 1 -steps 1
+	[ "$(led_level 'tpacpi::kbd_backlight')" -eq 2 ]
+	run "$bashlight" -kbd -restore -time 1 -steps 1
+	[ "$status" -eq 0 ]
+	[ "$(led_level 'tpacpi::kbd_backlight')" -eq 0 ]
 }
 
 @test "kbd lists only keyboard backlights" {
