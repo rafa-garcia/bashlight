@@ -85,7 +85,7 @@ get_brightness() {
 		max=$(<"$device_path/max_brightness")
 		[[ $max -gt 0 ]] || continue
 		actual=$(<"$actual_file")
-		actual_percent=$((actual * 100 / max))
+		actual_percent=$(level_to_percent "$actual" "$max")
 
 		printf '%s: %d%% (%d/%d)\n' "${device_path##*/}" "$actual_percent" "$actual" "$max"
 	done
@@ -215,17 +215,18 @@ set_brightness() {
 		[[ -r $actual_file ]] || continue
 		writable=$((writable + 1))
 
-		local max actual target
+		local max actual target percent
 		max=$(<"$device_path/max_brightness")
 		[[ $max -gt 0 ]] || continue
 		actual=$(<"$actual_file")
 
 		case $operation in
-		=*) target=$(clamp $((${operation#=} * max / 100)) "$floor" "$max") ;;
-		+*) target=$(clamp $((actual + ${operation#+} * max / 100)) "$floor" "$max") ;;
-		-*) target=$(clamp $((actual - ${operation#-} * max / 100)) "$floor" "$max") ;;
+		=*) percent=${operation#=} ;;
+		+*) percent=$(clamp $(($(level_to_percent "$actual" "$max") + ${operation#+})) 0 100) ;;
+		-*) percent=$(clamp $(($(level_to_percent "$actual" "$max") - ${operation#-})) 0 100) ;;
 		*) die "value '$operation' not processable" ;;
 		esac
+		target=$(clamp "$(percent_to_level "$percent" "$max")" "$floor" "$max")
 
 		# Skip if no change needed
 		[[ $target -eq $actual ]] && continue
@@ -252,6 +253,16 @@ clamp() {
 	fi
 
 	printf '%s\n' "$value"
+}
+
+percent_to_level() {
+	local percent=$1 max=$2
+	printf '%s\n' $((percent * max / 100))
+}
+
+level_to_percent() {
+	local level=$1 max=$2
+	printf '%s\n' $((level * 100 / max))
 }
 
 print_usage() {
