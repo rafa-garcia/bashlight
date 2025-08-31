@@ -42,6 +42,7 @@ where options are:
   -restore                 Restore the last saved brightness
   -device <name>           Apply the operation to the given device only
   -kbd                     Control keyboard backlights instead of displays
+  -perceptual              Map percentages to a perceptual brightness curve
   -time <milliseconds>     Duration of transition to new value. Default is 200
   -steps <steps>           Number of transition steps. Default is 20
 ```
@@ -74,6 +75,9 @@ bashlight -kbd -set 0
 # Dim for the lock screen, put it back on unlock
 bashlight -save && bashlight -set 5
 bashlight -restore
+
+# Steps that look even to the eye across the whole range
+bashlight -perceptual -inc 10
 ```
 
 ## Tests

@@ -155,6 +155,32 @@ led_level() {
 	[[ $output == *"no such device"* ]]
 }
 
+@test "perceptual set maps through the square curve" {
+	run "$bashlight" -perceptual -set 50 -time 1 -steps 1
+	[ "$status" -eq 0 ]
+	[ "$(level test_backlight)" -eq 25 ]
+}
+
+@test "perceptual get reports the perceptual percentage" {
+	echo 25 >"$BACKLIGHT_DIR/test_backlight/actual_brightness"
+	run "$bashlight" -perceptual -get
+	[ "$status" -eq 0 ]
+	[ "$output" = "test_backlight: 50% (25/100)" ]
+}
+
+@test "perceptual inc steps in perceptual space" {
+	echo 25 >"$BACKLIGHT_DIR/test_backlight/actual_brightness"
+	run "$bashlight" -perceptual -inc 10 -time 1 -steps 1
+	[ "$(level test_backlight)" -eq 36 ]
+}
+
+@test "perceptual dec still floors at the minimum" {
+	echo 25 >"$BACKLIGHT_DIR/test_backlight/actual_brightness"
+	run "$bashlight" -perceptual -dec 90 -time 1 -steps 1
+	[ "$status" -eq 0 ]
+	[ "$(level test_backlight)" -eq 1 ]
+}
+
 @test "save and restore round-trip" {
 	run "$bashlight" -save
 	[ "$status" -eq 0 ]

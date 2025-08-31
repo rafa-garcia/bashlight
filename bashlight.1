@@ -14,6 +14,7 @@ bashlight \- adjust backlight brightness using the Linux kernel sysfs interface.
 [\-restore]
 [\-device name]
 [\-kbd]
+[\-perceptual]
 [\-time milliseconds]
 [\-steps number]
 .SH DESCRIPTION
@@ -43,6 +44,10 @@ Apply the operation to the named device only instead of every output.
 .IP \-kbd
 Control keyboard backlights found under /sys/class/leds instead of
 displays. Setting 0 is allowed and switches the light off.
+.IP \-perceptual
+Map percentages through a square curve approximating human brightness
+perception, so equal steps look equally big across the range. Affects
+\-get, \-set, \-inc and \-dec.
 .IP \-help
 Print out a summary of the usage and exit.
 .IP \-version

@@ -68,7 +68,7 @@ list_devices() {
 }
 
 get_brightness() {
-	local device=${1:-} kbd=${2:-0}
+	local device=${1:-} kbd=${2:-0} perceptual=${3:-0}
 	find_devices "$kbd"
 	validate_device "$device" "$kbd"
 
@@ -85,7 +85,7 @@ get_brightness() {
 		max=$(<"$device_path/max_brightness")
 		[[ $max -gt 0 ]] || continue
 		actual=$(<"$actual_file")
-		actual_percent=$(level_to_percent "$actual" "$max")
+		actual_percent=$(level_to_percent "$actual" "$max" "$perceptual")
 
 		printf '%s: %d%% (%d/%d)\n' "${device_path##*/}" "$actual_percent" "$actual" "$max"
 	done
@@ -192,7 +192,7 @@ fade_to() {
 }
 
 set_brightness() {
-	local operation=$1 time=${2:-200} steps=${3:-20} device=${4:-} kbd=${5:-0}
+	local operation=$1 time=${2:-200} steps=${3:-20} device=${4:-} kbd=${5:-0} perceptual=${6:-0}
 	find_devices "$kbd"
 	validate_device "$device" "$kbd"
 
@@ -222,11 +222,11 @@ set_brightness() {
 
 		case $operation in
 		=*) percent=${operation#=} ;;
-		+*) percent=$(clamp $(($(level_to_percent "$actual" "$max") + ${operation#+})) 0 100) ;;
-		-*) percent=$(clamp $(($(level_to_percent "$actual" "$max") - ${operation#-})) 0 100) ;;
+		+*) percent=$(clamp $(($(level_to_percent "$actual" "$max" "$perceptual") + ${operation#+})) 0 100) ;;
+		-*) percent=$(clamp $(($(level_to_percent "$actual" "$max" "$perceptual") - ${operation#-})) 0 100) ;;
 		*) die "value '$operation' not processable" ;;
 		esac
-		target=$(clamp "$(percent_to_level "$percent" "$max")" "$floor" "$max")
+		target=$(clamp "$(percent_to_level "$percent" "$max" "$perceptual")" "$floor" "$max")
 
 		# Skip if no change needed
 		[[ $target -eq $actual ]] && continue
@@ -255,14 +255,40 @@ clamp() {
 	printf '%s\n' "$value"
 }
 
+isqrt() {
+	local n=$1 x guess
+
+	if [[ $n -lt 2 ]]; then
+		printf '%s\n' "$n"
+		return
+	fi
+
+	x=$n
+	guess=$(((x + 1) / 2))
+	while [[ $guess -lt $x ]]; do
+		x=$guess
+		guess=$(((x + n / x) / 2))
+	done
+	printf '%s\n' "$x"
+}
+
 percent_to_level() {
-	local percent=$1 max=$2
-	printf '%s\n' $((percent * max / 100))
+	local percent=$1 max=$2 perceptual=${3:-0}
+	if [[ $perceptual -eq 1 ]]; then
+		# Square curve approximates human brightness perception
+		printf '%s\n' $((max * percent * percent / 10000))
+	else
+		printf '%s\n' $((percent * max / 100))
+	fi
 }
 
 level_to_percent() {
-	local level=$1 max=$2
-	printf '%s\n' $((level * 100 / max))
+	local level=$1 max=$2 perceptual=${3:-0}
+	if [[ $perceptual -eq 1 ]]; then
+		isqrt $((10000 * level / max))
+	else
+		printf '%s\n' $((level * 100 / max))
+	fi
 }
 
 print_usage() {
@@ -280,6 +306,7 @@ where options are:
   -restore                 Restore the last saved brightness
   -device <name>           Apply the operation to the given device only
   -kbd                     Control keyboard backlights instead of displays
+  -perceptual              Map percentages to a perceptual brightness curve
   -time <milliseconds>     Duration of transition to new value. Default is 200
   -steps <steps>           Number of transition steps. Default is 20
 "
@@ -291,7 +318,7 @@ print_version() {
 
 parse_args() {
 	# Default values
-	local action='' value='' device='' kbd=0 time=200 steps=20
+	local action='' value='' device='' kbd=0 perceptual=0 time=200 steps=20
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -340,6 +367,10 @@ parse_args() {
 			kbd=1
 			shift
 			;;
+		-perceptual)
+			perceptual=1
+			shift
+			;;
 		-time)
 			[[ -n ${2:-} ]] || die "missing value for -time"
 			validate_positive_integer "$2" "time"
@@ -359,13 +390,13 @@ parse_args() {
 	done
 
 	case $action in
-	get) get_brightness "$device" "$kbd" ;;
+	get) get_brightness "$device" "$kbd" "$perceptual" ;;
 	list) list_devices "$kbd" ;;
 	save) save_brightness "$device" "$kbd" ;;
 	restore) restore_brightness "$time" "$steps" "$device" "$kbd" ;;
-	set) set_brightness "=$value" "$time" "$steps" "$device" "$kbd" ;;
-	inc) set_brightness "+$value" "$time" "$steps" "$device" "$kbd" ;;
-	dec) set_brightness "-$value" "$time" "$steps" "$device" "$kbd" ;;
+	set) set_brightness "=$value" "$time" "$steps" "$device" "$kbd" "$perceptual" ;;
+	inc) set_brightness "+$value" "$time" "$steps" "$device" "$kbd" "$perceptual" ;;
+	dec) set_brightness "-$value" "$time" "$steps" "$device" "$kbd" "$perceptual" ;;
 	*) print_usage ;;
 	esac
 }
