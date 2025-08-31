@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-readonly VERSION=0.5.0
+readonly VERSION=0.6.0
 readonly MIN_BRIGHTNESS=1 # safe value to avoid a pitch-black screen
 readonly BACKLIGHT_DIR=${BACKLIGHT_DIR:-/sys/class/backlight}
 readonly LEDS_DIR=${LEDS_DIR:-/sys/class/leds}
