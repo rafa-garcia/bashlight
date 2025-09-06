@@ -1,0 +1,25 @@
+#compdef bashlight
+
+_bashlight_devices() {
+	local -a names list
+	list=(bashlight -list)
+	(( ${words[(I)-kbd]} )) && list=(bashlight -kbd -list)
+	names=(${(f)"$($list 2>/dev/null)"})
+	compadd -a names
+}
+
+_arguments \
+	'(- *)-help[Print out a summary of the usage and exit]' \
+	'(- *)-version[Print out the program version and exit]' \
+	'-get[Print out the current brightness of each output]' \
+	'-list[Print out the backlight device names]' \
+	'-set[Sets each backlight brightness to the specified level]:percentage' \
+	'-inc[Increases brightness by the specified amount]:percentage' \
+	'-dec[Decreases brightness by the specified amount]:percentage' \
+	'-save[Save the current brightness of each output]' \
+	'-restore[Restore the last saved brightness]' \
+	'-device[Apply the operation to the given device only]:device:_bashlight_devices' \
+	'-kbd[Control keyboard backlights instead of displays]' \
+	'-perceptual[Map percentages to a perceptual brightness curve]' \
+	'-time[Duration of transition to new value in milliseconds]:milliseconds' \
+	'-steps[Number of transition steps]:steps'

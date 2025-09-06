@@ -25,10 +25,10 @@ jobs:
         sudo mv shfmt /usr/local/bin/
     
     - name: Lint with shellcheck
-      run: shellcheck bashlight
-    
+      run: shellcheck bashlight completions/bashlight
+
     - name: Check formatting with shfmt
-      run: shfmt -d bashlight
+      run: shfmt -d bashlight completions/bashlight
     
     - name: Run tests
       run: bats tests

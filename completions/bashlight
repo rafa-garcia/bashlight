@@ -1,0 +1,32 @@
+# shellcheck shell=bash
+#
+# bash completion for bashlight
+
+_bashlight() {
+	# shellcheck disable=SC2034 # cword is assigned by _init_completion
+	local cur prev words cword
+	_init_completion -n : || return
+
+	COMPREPLY=()
+
+	case $prev in
+	-device)
+		local list=(bashlight -list) word
+		for word in "${words[@]}"; do
+			[[ $word == -kbd ]] && list=(bashlight -kbd -list)
+		done
+		mapfile -t COMPREPLY < <(compgen -W "$("${list[@]}" 2>/dev/null)" -- "$cur")
+		__ltrim_colon_completions "$cur"
+		return
+		;;
+	-set | -inc | -dec | -time | -steps)
+		# Numeric arguments, nothing to suggest
+		return
+		;;
+	esac
+
+	mapfile -t COMPREPLY < <(compgen -W '-help -version -get -list -set -inc -dec
+		-save -restore -device -kbd -perceptual -time -steps' -- "$cur")
+}
+
+complete -F _bashlight bashlight

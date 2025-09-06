@@ -20,7 +20,7 @@ This utility handles display brightness when backlight control is exposed to the
 2. Change working directory to `bashlight`.
     - `cd bashlight`
 
-3. Run `sudo make install` from the root directory to install the script, manpage and udev rule.
+3. Run `sudo make install` from the root directory to install the script, manpage, udev rule and shell completions (bash and zsh).
     - The `90-backlight.rules` udev rule will be added to allow the `video` group to control backlight and keyboard backlight
     - Add your user to the `video` group: `sudo usermod -a -G video $USER` (logout/login required)
 
