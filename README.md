@@ -80,6 +80,10 @@ bashlight -restore
 bashlight -perceptual -inc 10
 ```
 
+## External monitors
+
+Backlight control over DDC/CI is exposed through the same sysfs interface by the [ddcci-backlight](https://gitlab.com/ddcci-driver-linux/ddcci-driver-linux) kernel module. With it loaded, external monitors show up under `/sys/class/backlight` like any other device and bashlight controls them with no extra configuration.
+
 ## Tests
 
 ```bash
