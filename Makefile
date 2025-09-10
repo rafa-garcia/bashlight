@@ -8,11 +8,11 @@ zshcompdir = $(prefix)/share/zsh/site-functions
 .PHONY: install
 install: bashlight bashlight.1 90-backlight.rules completions/bashlight completions/_bashlight
 	$(NORMAL_INSTALL)
-	install -vCDt $(DESTDIR)$(bindir) bashlight
-	install -vCDt $(DESTDIR)$(mandir) bashlight.1
-	install -vCDt $(DESTDIR)$(bashcompdir) completions/bashlight
-	install -vCDt $(DESTDIR)$(zshcompdir) completions/_bashlight
-	install -vCDt $(DESTDIR)$(sysconfdir)/udev/rules.d 90-backlight.rules
+	install -vDt $(DESTDIR)$(bindir) bashlight
+	install -vDt $(DESTDIR)$(mandir) bashlight.1
+	install -vDt $(DESTDIR)$(bashcompdir) completions/bashlight
+	install -vDt $(DESTDIR)$(zshcompdir) completions/_bashlight
+	install -vDt $(DESTDIR)$(sysconfdir)/udev/rules.d 90-backlight.rules
 	$(POST_INSTALL)
 ifeq ($(DESTDIR),)
 	udevadm control --reload-rules
